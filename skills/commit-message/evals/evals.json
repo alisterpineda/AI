@@ -1,0 +1,41 @@
+{
+  "skill_name": "commit-message",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Commit my changes. I fixed a race condition in the WebSocket reconnection logic where the retry timer wasn't being cleared on successful reconnect, causing duplicate connections.",
+      "expected_output": "A well-formatted commit message with a plain-language title and technical bullet points",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "Please commit. I added search functionality to the contacts page — it filters by name and email using a debounced input, and I added a Postgres trigram index to keep it fast.",
+      "expected_output": "A well-formatted commit message with a plain-language title and technical bullet points",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Commit this. I refactored the auth middleware to extract token validation into its own module so it can be reused by both the REST and GraphQL endpoints.",
+      "expected_output": "A well-formatted commit message with a plain-language title and technical bullet points",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "commit this",
+      "expected_output": "A well-formatted commit message derived from the staged diff alone",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "commit",
+      "expected_output": "A well-formatted commit message derived from the staged diff alone",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "ok commit my changes",
+      "expected_output": "A well-formatted commit message derived from the staged diff alone",
+      "files": []
+    }
+  ]
+}
