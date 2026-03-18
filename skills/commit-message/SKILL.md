@@ -1,9 +1,21 @@
 ---
 name: commit-message
-description: Defines how git commit messages should be formatted. Use this skill whenever the user asks to commit changes, make a commit, or write a commit message — even if they don't mention formatting. This ensures all commits follow the user's preferred style.
+description: Defines how git commits should be handled — what to stage and how to format the message. Use this skill whenever the user asks to commit changes, make a commit, or write a commit message — even if they don't mention formatting or staging. This ensures commits only include relevant changes and follow the user's preferred message style.
 ---
 
-# Commit Message Format
+# Commit Workflow
+
+## What to stage
+
+The working tree often contains changes unrelated to the current task — manual tweaks for local development (e.g. hardcoding a localhost URL), dependency file changes from `npm install`, editor configs, or experiments the user hasn't mentioned. Committing these by accident can break shared repos or pollute the history, and reversing a bad commit on a shared branch is painful. Being selective about staging is worth the extra few seconds.
+
+- **Stage files by name, not by wildcard.** Don't use `git add .`, `git add -A`, or `git add --all`. These sweep up everything, including changes you didn't make and shouldn't commit.
+- **Only stage files you changed** as part of the current task. If you didn't create or modify a file during this conversation, don't stage it — even if `git status` shows it as modified or untracked. Those changes belong to the user's other work.
+- **Review diffs before staging.** Run `git diff <file>` for each file you plan to stage. If a file contains a mix of your task-related changes and unrelated edits (e.g. the user manually tweaked a config value in the same file you refactored), don't stage the whole file. Instead, tell the user what you found and let them decide — they may want to split the commit or revert their local tweak first.
+- **Don't assume pre-staged changes are intentional.** If files are already staged when you begin, review them with `git diff --cached`. They may be leftovers the user staged earlier for a different purpose.
+- **When in doubt, ask.** Under-staging is easy to fix (`git add` one more file). Over-staging can mean an unwanted change lands on a shared branch and causes problems downstream.
+
+## Commit message format
 
 When writing git commit messages, follow this structure and style exactly.
 

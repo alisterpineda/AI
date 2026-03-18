@@ -36,6 +36,41 @@
       "prompt": "ok commit my changes",
       "expected_output": "A well-formatted commit message derived from the staged diff alone",
       "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "You just fixed a bug in src/app.js. Now commit your changes.",
+      "expected_output": "Only src/app.js is staged; unrelated package.json and .env.local changes are excluded",
+      "files": [],
+      "assertions": [
+        {"text": "Only src/app.js was staged for the commit — no other files"},
+        {"text": "package.json was NOT staged or committed"},
+        {"text": ".env.local was NOT staged or committed"},
+        {"text": "Used specific file path in git add, not git add . or git add -A"}
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Commit the auth middleware refactoring you just did.",
+      "expected_output": "Only src/auth.js is committed; pre-staged unrelated files are flagged and excluded",
+      "files": [],
+      "assertions": [
+        {"text": "src/auth.js was staged for the commit"},
+        {"text": "Agent noticed or flagged the pre-staged unrelated files"},
+        {"text": "src/logger.js was NOT included in the final commit"},
+        {"text": "tests/auth.test.js was NOT included in the final commit"}
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "You added input validation to src/utils.js. Commit your changes.",
+      "expected_output": "Agent detects mixed changes in src/utils.js and flags the unrelated API_URL change",
+      "files": [],
+      "assertions": [
+        {"text": "Agent noticed mixed task-related and unrelated changes in the same file"},
+        {"text": "Agent flagged the API_URL change as unrelated"},
+        {"text": "Agent did NOT blindly stage the whole file without commenting on mixed changes"}
+      ]
     }
   ]
 }
