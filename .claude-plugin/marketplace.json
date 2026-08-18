@@ -8,5 +8,10 @@
     "description": "Personal AI agent customizations: skills, hooks, agents, and MCP config, packaged as plugins.",
     "pluginRoot": "./plugins"
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "git-workflow",
+      "source": "./plugins/git-workflow"
+    }
+  ]
 }

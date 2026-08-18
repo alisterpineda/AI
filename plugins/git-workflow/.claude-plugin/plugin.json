@@ -1,0 +1,9 @@
+{
+  "name": "git-workflow",
+  "version": "0.1.0",
+  "description": "Git-related skills: commit staging and message conventions, PR title and description generation.",
+  "author": {
+    "name": "Alister Pineda",
+    "email": "alister@alisterpineda.com"
+  }
+}
