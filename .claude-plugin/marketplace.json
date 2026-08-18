@@ -1,0 +1,12 @@
+{
+  "name": "alisterpineda-ai",
+  "owner": {
+    "name": "Alister Pineda",
+    "email": "alister@alisterpineda.com"
+  },
+  "metadata": {
+    "description": "Personal AI agent customizations: skills, hooks, agents, and MCP config, packaged as plugins.",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": []
+}
