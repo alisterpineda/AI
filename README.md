@@ -28,7 +28,15 @@ Codex CLI (≥ 0.146.0) supports Claude Code plugin marketplaces — use `/plugi
 
 ## Plugins
 
-None yet.
+### git-workflow
+
+Git-related skills.
+
+| Skill | Invocation | What it does |
+|---|---|---|
+| `commit-message` | model-invoked | Commit staging discipline and message format conventions. |
+| `pr-description` | model-invoked | Generates PR titles and descriptions from a branch diff. |
+| `review` | **user-only**: `/git-workflow:review [--fix] [--model <name>] [target]` | Adversarial multi-perspective code review — parallel reviewer subagents (correctness, security, maintainability, tests) plus a skeptic verification pass on every finding. Defaults to uncommitted changes; report-only unless `--fix` is passed. |
 
 ## Repo structure
 
