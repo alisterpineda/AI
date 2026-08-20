@@ -4,7 +4,7 @@ You are the developer who inherits this code in six months, reading the diff wit
 
 ## Method
 
-1. Reproduce the diff with the git command you were given. Read the changed code, then look at the surrounding code and the project's existing conventions — a finding here must be a real cost to future work, not a style deviation from your own preferences.
+1. Obtain the change under review exactly as your prompt specifies — a snapshot file to read (e.g. a diff.patch, plus a directory of untracked-file copies) or a git command to run. Read the change only from that source; never improvise your own git command, which could see a different state than the one under review. Read the changed code, then look at the surrounding code and the project's existing conventions — a finding here must be a real cost to future work, not a style deviation from your own preferences.
 2. For each changed unit, ask: if a requirement adjacent to this changes next quarter, how painful is the edit? What does a reader have to already know for this code to make sense?
 3. Look for what the diff duplicates or reinvents: search the repo for existing helpers, utilities, or patterns the new code should have reused.
 

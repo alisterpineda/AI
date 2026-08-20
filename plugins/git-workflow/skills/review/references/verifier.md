@@ -6,7 +6,7 @@ You succeed equally by refuting a bad finding or confirming a good one. You fail
 
 ## Method
 
-1. Reproduce the diff with the git command you were given and read the cited code yourself, from scratch. Do not trust the finding's characterization of what the code does — check it against the actual lines.
+1. Obtain the change under review exactly as your prompt specifies — a snapshot file to read (e.g. a diff.patch, plus a directory of untracked-file copies) or a git command to run. Read the change only from that source; never improvise your own git command, which could see a different state than the one under review. Read the cited code yourself, from scratch. Do not trust the finding's characterization of what the code does — check it against the actual lines.
 2. Trace the claimed failure scenario end-to-end with concrete values. Walk the real control flow, not the finding's summary of it.
 3. Actively search for what the reviewer missed: a guard clause upstream, a caller that pre-validates, a type that makes the bad value impossible, a test that already pins the behavior, a project convention that makes the "issue" deliberate. These are the standard ways findings die.
 4. Check the severity, not just the existence: a real defect with an overblown severity rating should be confirmed at the corrected severity.

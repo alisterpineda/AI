@@ -1,8 +1,8 @@
 ---
 # ── Portable (agentskills.io spec) — read by Claude Code and GitHub Copilot ──
 name: review
-description: "Adversarial multi-perspective code review. Spawns independent reviewer agents (correctness, security, maintainability, tests), then puts every finding through a skeptic verification pass before reporting. Usage: /git-workflow:review [--fix] [--model <name>] [target]. Flags come before the target. With no target, reviews uncommitted changes. User-invoked only — never invoke this skill on your own initiative."
-compatibility: "Not fully portable — deliberately uses frontmatter extensions beyond the agentskills.io spec (disable-model-invocation, user-invocable, argument-hint). Designed for Claude Code and GitHub Copilot CLI, which honor them; hosts that ignore them (e.g. Codex) lose the user-only invocation guarantee. Uses parallel subagents when the host provides a subagent-spawning tool; falls back to sequential review passes otherwise."
+description: "Adversarial multi-perspective code review. Spawns independent reviewer agents (correctness, security, maintainability, tests), then puts every finding through a skeptic verification pass before reporting. Usage: /git-workflow:review [--fix] [--model <name>] [target]. Flags come before the target. With no target, reviews the staged changes — or all uncommitted changes if nothing is staged. User-invoked only — never invoke this skill on your own initiative."
+compatibility: "Not fully portable — deliberately uses frontmatter extensions beyond the agentskills.io spec. On Claude Code, context: fork runs the whole skill in a forked subagent that orchestrates reviewer/verifier subagents, keeping the review out of the main conversation. VS Code Copilot Chat also honors context: fork (experimental, opt-in via github.copilot.chat.skillTool.enabled), forking into a generic subagent — the agent/background fields are Claude-only and ignored there. Hosts that ignore context: fork entirely (Copilot CLI, Codex) run the same workflow in the main conversation instead — still with parallel reviewers where a subagent tool exists; hosts with no subagent tool fall back to sequential passes. Hosts that ignore disable-model-invocation lose the user-only invocation guarantee."
 
 # ── Non-spec extension, honored by Claude Code and GitHub Copilot (same field
 # name in both). Blocks auto-invocation; only /git-workflow:review works.
@@ -14,11 +14,25 @@ disable-model-invocation: true
 # stated explicitly to document intent alongside disable-model-invocation.
 user-invocable: true
 argument-hint: "[--fix] [--model <name>] [target]"
+
+# ── Fork extensions ──
+# context: fork runs this skill's body in a forked subagent — the fork IS the
+# review orchestrator, so the whole review (and --fix) stays out of the main
+# conversation. The fork starts with a fresh context: everything it needs is in
+# this file. Per-host support for these three fields is documented once, in the
+# compatibility string above. background: false keeps the fork in the foreground — background forks get a
+# narrower tool set that may exclude the Agent tool this workflow needs to
+# spawn reviewers.
+context: fork
+agent: general-purpose
+background: false
 ---
 
 # Adversarial Code Review
 
 Run a multi-perspective adversarial review of a diff. Several independent reviewers each attack the change from one angle, a skeptic then tries to refute every finding, and only findings that survive refutation reach the report. The point of this structure is signal-to-noise: isolated perspectives find more than one generalist pass, and the refutation stage kills the plausible-but-wrong findings that make reviews annoying to read.
+
+You are the review orchestrator. Depending on the host, you are executing either as a forked subagent (Claude Code, via `context: fork`) or directly in the main conversation (hosts that ignore that field). The workflow is identical either way, but as a fork your context starts fresh and **only your final message reaches the user** — so the complete report (step 8) must be your final message, and nothing may be left implied by earlier conversation you don't have.
 
 Report only by default. Never modify files unless the `--fix` flag was passed.
 
@@ -32,24 +46,33 @@ Arguments arrive as a single string. Flags come first, target last:
 
 Parse left to right:
 
-- `--fix` — after the report, apply fixes for confirmed findings (see step 9).
-- `--model <name>` — model to use for reviewer and verifier subagents (e.g. `haiku`, `sonnet`, `opus`, or a full model ID). The orchestration you are doing yourself always stays on the session model; this flag only affects spawned subagents. If the host's subagent tool doesn't accept the given value, tell the user and continue with the default model rather than failing.
-- Anything after the flags is the **target**. Any unrecognized `--flag` — leading or trailing (e.g. `review src/ --fix` puts the flag after the target) — is an error: tell the user flags come before the target and stop, rather than silently absorbing the token into the target.
+- `--fix` — after composing the report, apply fixes for confirmed findings (see step 9).
+- `--model <name>` — model to use for reviewer and verifier subagents (e.g. `haiku`, `sonnet`, `opus`, or a full model ID). The orchestration you are doing yourself always stays on the model you were started with; this flag only affects subagents you spawn. If the host's subagent tool doesn't accept the given value, note it in the report header and continue with the default model rather than failing.
+- Anything after the flags is the **target**. Any unrecognized `--flag` — leading or trailing (e.g. `review src/ --fix` puts the flag after the target) — is an error: make your final message a one-line explanation that flags come before the target, and stop, rather than silently absorbing the token into the target.
 
 ARGUMENTS: $ARGUMENTS
 
 ## 2. Resolve the target
 
-- **No target**: review uncommitted changes — staged, unstaged, and untracked files (`git status`, `git diff HEAD`, plus reading untracked files). If the working tree is clean, say there is nothing to review and that an explicit target (branch, commit range, or path) can be passed instead. Stop there.
+- **No target**: if anything is staged (`git diff --cached --quiet` exits non-zero), review the staged changes only — `git diff --cached`. Otherwise review all uncommitted changes — unstaged and untracked files (`git status`, `git diff HEAD`, plus reading untracked files). The report title says which scope applied ("staged changes" vs "uncommitted changes") so a surprising staging state is visible. If the working tree is clean, make your final message a statement that there is nothing to review and that an explicit target (branch, commit range, or path) can be passed instead. Stop there.
 - **Branch name**: review what the current branch adds relative to it — `git diff <branch>...HEAD` (three dots, so the comparison is from the merge base).
 - **Commit range** (`A..B`): review that range's diff. A **single commit** means that commit's own change: `git show <commit>` (equivalently `git diff <commit>^..<commit>`) — never `git diff <commit>`, which would diff against the working tree instead.
 - **Path**: review uncommitted changes limited to that path.
 
-State the resolved target in one line before proceeding so the user can catch a misinterpretation early.
+The resolved target appears in the report's title line (step 8), which is how the user catches a misinterpretation — state it there exactly as you resolved it, not as it was typed.
 
-## 3. Scout the diff
+## 3. Scout the diff and snapshot it
 
 Read the full diff and build a short map: which files changed, and what kind of change each is (logic, config, tests, docs, dependencies, generated code). This map drives perspective selection and gives reviewers a starting point. Do not start judging the code yourself — that is the reviewers' job, and pre-forming opinions here undermines their independence.
+
+Then freeze what is being reviewed into a fresh snapshot directory that this run creates — a new uniquely-named subdirectory under wherever the host wants temporary files (e.g. inside a session scratchpad directory, if one is designated), or `mktemp -d` if the host designates nothing. Never use a host-designated directory itself as the snapshot: step 8 deletes the snapshot directory, and the delete must only ever hit a directory this run created.
+
+Inside it:
+
+- Write the exact diff output to `<snapshot>/diff.patch`.
+- When untracked files are in scope, copy each one to `<snapshot>/untracked/<relative-path>` — copies, not a list of paths, so later edits to those files cannot leak into the review.
+
+Every reviewer and verifier reads the change from the snapshot instead of re-running git commands. That saves repeated work, but the real point is consistency: all of them judge the same state even if the working tree changes while the review runs. The snapshot defines only what is under review — the live repository stays available to subagents for surrounding context. When the scope is staged-only, the live working tree can differ from the snapshot (a partially staged file has different content and line numbers): the snapshot is the authoritative state, and every `file:line` citation must be derived from `diff.patch`, not from the live tree.
 
 ## 4. Select perspectives
 
@@ -69,7 +92,7 @@ Skipping is not silent: the report header lists which perspectives were skipped 
 **If the host provides a subagent-spawning tool** (Claude Code's Agent/Task tool or equivalent): spawn all selected reviewers in parallel, one subagent per perspective, applying `--model` if given. Each subagent's prompt must contain:
 
 1. The absolute path to its charter file, with the instruction to read it first and adopt that role completely.
-2. The resolved target and the exact git command(s) to reproduce the diff — and, when the scope includes untracked files (`git diff` never shows them), the explicit list of untracked file paths with the instruction to read each one in full as part of the reviewed change.
+2. The resolved target, and the absolute path to `<snapshot>/diff.patch` to read as the reviewed change — stating that the snapshot is the authoritative state and that `file:line` citations must come from it, since live files can differ when the scope is staged-only — — plus, when the scope includes untracked files (`git diff` never shows them), the absolute path of `<snapshot>/untracked/` with the instruction to read every file under it in full as part of the reviewed change.
 3. That it has read access to the full repository for context, but must not modify anything.
 4. That its final message must be only its findings in the charter's output format (or the charter's explicit "no findings" statement) — no preamble, no summary of its process.
 
@@ -85,7 +108,7 @@ Merge findings that share a root cause, even when different perspectives describ
 
 Every deduplicated finding goes through refutation — no exceptions, including findings that look obviously right. The charter is `references/verifier.md`.
 
-With subagents: spawn one verifier per finding, in parallel — in waves of at most 8 when findings are numerous, so a noisy review does not fan out into dozens of concurrent subagents — applying `--model` if given. Each verifier gets the charter path, the single finding it is judging (full text), and the git command(s) to reproduce the diff (plus the untracked-file list when the scope includes untracked files). Fresh context per finding is the point — the verifier must re-derive the truth from the code, not inherit the reviewer's framing.
+With subagents: spawn one verifier per finding, in parallel — in waves of at most 8 when findings are numerous, so a noisy review does not fan out into dozens of concurrent subagents — applying `--model` if given. Each verifier gets the charter path, the single finding it is judging (full text), and the same snapshot paths the reviewers got (`<snapshot>/diff.patch`, plus `<snapshot>/untracked/` when in scope). Fresh context per finding is the point — the verifier must re-derive the truth from the code, not inherit the reviewer's framing.
 
 Without subagents: verify sequentially, one finding at a time. Before each one, re-read the relevant code from scratch and actively look for reasons the finding is wrong; you wrote these findings minutes ago, so bias toward refutation to compensate.
 
@@ -93,7 +116,7 @@ Findings verdict `CONFIRMED` go in the report. Findings verdict `REFUTED` go in 
 
 ## 8. Report
 
-Present the report in the conversation using this structure:
+Assemble the report using this structure. Without `--fix`, output it as your final message. With `--fix`, hold it, complete step 9 first, and output the report with the fix summary appended as one final message — remember that as a fork, only that final message reaches the user. Just before sending that final message, delete the snapshot directory — exactly the directory this run created in step 3, never a host-designated parent (best effort — a failed cleanup is not worth mentioning in the report).
 
 ```
 # Adversarial review: <target>
@@ -123,4 +146,4 @@ Where the verifier corrected a severity, append *(severity corrected from X by v
 
 Without the flag: the report is the end. Do not apply fixes, do not offer to.
 
-With the flag: after presenting the report, apply the suggested fix for each confirmed finding yourself, in the main conversation (not via subagents), making the smallest change that resolves the defect. Then run whatever cheap sanity check the project offers (build, lint, or the directly relevant tests) and summarize what was changed and what was verified. If a fix is too risky or ambiguous to apply mechanically, skip it and say why instead of guessing.
+With the flag: apply the suggested fix for each confirmed finding yourself, directly (not via subagents), making the smallest change that resolves the defect. Then run whatever cheap sanity check the project offers (build, lint, or the directly relevant tests) and append a `## Fixes applied` section to the report summarizing what was changed and what was verified. If a fix is too risky or ambiguous to apply mechanically, skip it and say why in that section instead of guessing.

@@ -4,7 +4,7 @@ You are hunting for the bug that ships because the tests let it. Assume this dif
 
 ## Method
 
-1. Reproduce the diff with the git command you were given. List every behavioral change in the source, then find the test that would fail if that change regressed. No such test = a candidate finding.
+1. Obtain the change under review exactly as your prompt specifies — a snapshot file to read (e.g. a diff.patch, plus a directory of untracked-file copies) or a git command to run. Read the change only from that source; never improvise your own git command, which could see a different state than the one under review. List every behavioral change in the source, then find the test that would fail if that change regressed. No such test = a candidate finding.
 2. Read the changed/added tests as an adversary: for each one, imagine plausibly-wrong implementations and check whether the test would actually catch them. A test that passes against a broken implementation is not a test.
 3. Check how the project tests similar code — the bar is the project's own testing conventions, applied to what this diff changed.
 

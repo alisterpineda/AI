@@ -36,8 +36,9 @@ After adding a plugin: register it in `.claude-plugin/marketplace.json` and run 
 
 ## Conventions
 
+- **Claude Code is the source of truth.** Design skills, agents, and hooks for Claude Code first; anything created for another harness (Copilot, Codex) is a derivative of the Claude Code version and must not fork behavior — when they drift, the Claude Code version wins and the derivative is regenerated from it.
 - **Skills are the portable unit.** Prefer a skill over a slash command or per-vendor prompt file for anything reusable.
-- **Portable skills** stick to the vendor-neutral Agent Skills frontmatter fields (agentskills.io): `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`. Claude-only extensions (`context: fork`, `model`, `hooks`, dynamic `` !`cmd` `` injection, etc.) are allowed only in skills deliberately marked Claude-only — note it in the skill's `description` or `compatibility`.
+- **Portable skills** stick to the vendor-neutral Agent Skills frontmatter fields (agentskills.io): `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`. Claude-only extensions (`context: fork`, `model`, `hooks`, dynamic `` !`cmd` `` injection, etc.) are allowed only in skills deliberately marked Claude-only — note it in the skill's `description` or `compatibility`. (One partial exception: VS Code Copilot Chat honors `context: fork` experimentally behind `github.copilot.chat.skillTool.enabled`; Copilot CLI ignores it and loads the skill inline.)
 - **Hooks are not portable.** Claude Code, Copilot, and Codex each have different hook config formats and event sets. Keep hook logic in standalone scripts under `hooks/scripts/` so the per-vendor wiring stays a thin wrapper. Use `${CLAUDE_PLUGIN_ROOT}` for paths in `hooks.json`.
 - **Version discipline:** bump `version` in `.claude-plugin/plugin.json` on every meaningful change — all consumers (Claude Code, Copilot, Codex) cache installed plugins and only refetch when the version string changes.
 - **Naming:** kebab-case for plugin and skill names. Skill names become namespaced as `<plugin-name>:<skill-name>` in Claude Code.
