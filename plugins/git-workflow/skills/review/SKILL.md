@@ -18,21 +18,27 @@ argument-hint: "[--fix] [--model <name>] [target]"
 # ── Fork extensions ──
 # context: fork runs this skill's body in a forked subagent — the fork IS the
 # review orchestrator, so the whole review (and --fix) stays out of the main
-# conversation. The fork starts with a fresh context: everything it needs is in
-# this file. Per-host support for these three fields is documented once, in the
-# compatibility string above. background: false keeps the fork in the foreground — background forks get a
-# narrower tool set that may exclude the Agent tool this workflow needs to
-# spawn reviewers.
+# conversation. The fork inherits the conversation context, but this file is
+# written self-contained and must not depend on that. Per-host support for
+# these three fields is documented once, in the compatibility string above.
+# background: true (the default, stated to document intent) runs the fork as a
+# background agent, matching the built-in /code-review: the invocation returns
+# immediately, the conversation stays usable while the review runs, and the
+# report arrives as a completion notification. Background forks inherit the
+# parent's full tool set (Claude Code ≥ 2.1.232), including the Agent tool
+# this workflow needs to spawn reviewers; on a host that withholds it, step
+# 5's sequential fallback applies. Caveat: a background fork's --fix edits
+# bypass session checkpoints (/rewind cannot undo them) — git is the undo path.
 context: fork
 agent: general-purpose
-background: false
+background: true
 ---
 
 # Adversarial Code Review
 
 Run a multi-perspective adversarial review of a diff. Several independent reviewers each attack the change from one angle, a skeptic then tries to refute every finding, and only findings that survive refutation reach the report. The point of this structure is signal-to-noise: isolated perspectives find more than one generalist pass, and the refutation stage kills the plausible-but-wrong findings that make reviews annoying to read.
 
-You are the review orchestrator. Depending on the host, you are executing either as a forked subagent (Claude Code, via `context: fork`) or directly in the main conversation (hosts that ignore that field). The workflow is identical either way, but as a fork your context starts fresh and **only your final message reaches the user** — so the complete report (step 8) must be your final message, and nothing may be left implied by earlier conversation you don't have.
+You are the review orchestrator. Depending on the host, you are executing either as a forked subagent (Claude Code, via `context: fork`) or directly in the main conversation (hosts that ignore that field). The workflow is identical either way, but as a fork **only your final message reaches the user** — so the complete report (step 8) must be your final message, and it must stand entirely on its own: even if you can see prior conversation, assume the user will read the report without it.
 
 Report only by default. Never modify files unless the `--fix` flag was passed.
 
@@ -146,4 +152,4 @@ Where the verifier corrected a severity, append *(severity corrected from X by v
 
 Without the flag: the report is the end. Do not apply fixes, do not offer to.
 
-With the flag: apply the suggested fix for each confirmed finding yourself, directly (not via subagents), making the smallest change that resolves the defect. Then run whatever cheap sanity check the project offers (build, lint, or the directly relevant tests) and append a `## Fixes applied` section to the report summarizing what was changed and what was verified. If a fix is too risky or ambiguous to apply mechanically, skip it and say why in that section instead of guessing.
+With the flag: apply the suggested fix for each confirmed finding yourself, directly (not via subagents), making the smallest change that resolves the defect. Then run whatever cheap sanity check the project offers (build, lint, or the directly relevant tests) and append a `## Fixes applied` section to the report summarizing what was changed and what was verified. When running as a background fork, these edits bypass the host's checkpoint/rewind mechanism — say so in that section and point at git as the way to undo them. If a fix is too risky or ambiguous to apply mechanically, skip it and say why in that section instead of guessing.
