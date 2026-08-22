@@ -1,7 +1,7 @@
 ---
 # ── Portable (agentskills.io spec) — read by Claude Code and GitHub Copilot ──
 name: review
-description: "Adversarial multi-perspective code review. Spawns independent reviewer agents (correctness, security, maintainability, tests), then puts every finding through a skeptic verification pass before reporting. Usage: /git-workflow:review [--fix] [--model <name>] [target]. Flags come before the target. With no target, reviews the staged changes — or all uncommitted changes if nothing is staged. User-invoked only — never invoke this skill on your own initiative."
+description: "Adversarial multi-perspective code review. Spawns independent reviewer agents (correctness, security, maintainability, tests, performance), then puts every finding through a skeptic verification pass before reporting. Usage: /git-workflow:review [--fix] [--model <name>] [target]. Flags come before the target. With no target, reviews the staged changes — or all uncommitted changes if nothing is staged. User-invoked only — never invoke this skill on your own initiative."
 compatibility: "Not fully portable — deliberately uses frontmatter extensions beyond the agentskills.io spec. On Claude Code, context: fork runs the whole skill in a forked subagent that orchestrates reviewer/verifier subagents, keeping the review out of the main conversation. VS Code Copilot Chat also honors context: fork (experimental, opt-in via github.copilot.chat.skillTool.enabled), forking into a generic subagent — the agent/background fields are Claude-only and ignored there. Hosts that ignore context: fork entirely (Copilot CLI, Codex) run the same workflow in the main conversation instead — still with parallel reviewers where a subagent tool exists; hosts with no subagent tool fall back to sequential passes. Hosts that ignore disable-model-invocation lose the user-only invocation guarantee."
 
 # ── Non-spec extension, honored by Claude Code and GitHub Copilot (same field
@@ -89,6 +89,7 @@ Each perspective has a charter file in this skill's `references/` directory (res
 | Correctness | `references/correctness.md` | Always. |
 | Security | `references/security.md` | The diff touches input handling, auth, network calls, shell/process execution, file paths, serialization, SQL/queries, secrets, or dependency/config changes. |
 | Tests | `references/tests.md` | Source logic changed (whether or not tests changed with it), or test files themselves changed. |
+| Performance | `references/performance.md` | The diff touches loops or recursion, database/network/file I/O, caching, concurrency, or code on a hot path (per-request, per-item, startup, UI). |
 | Maintainability | `references/maintainability.md` | Any non-trivial code change — skip only for pure docs/config/generated-file diffs. |
 
 Skipping is not silent: the report header lists which perspectives were skipped and why. When in doubt about a criterion, run the perspective — a wasted pass is cheaper than a missed vulnerability.

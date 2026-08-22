@@ -36,7 +36,7 @@ Git-related skills.
 |---|---|---|
 | `commit-message` | model-invoked | Commit staging discipline and message format conventions. |
 | `pr-description` | model-invoked | Generates PR titles and descriptions from a branch diff. |
-| `review` | **user-only**: `/git-workflow:review [--fix] [--model <name>] [target]` | Adversarial multi-perspective code review — parallel reviewer subagents (correctness, security, maintainability, tests) plus a skeptic verification pass on every finding. Defaults to uncommitted changes; report-only unless `--fix` is passed. |
+| `review` | **user-only**: `/git-workflow:review [--fix] [--model <name>] [target]` | Adversarial multi-perspective code review — parallel reviewer subagents (correctness, security, maintainability, tests, performance) plus a skeptic verification pass on every finding. Defaults to uncommitted changes; report-only unless `--fix` is passed. |
 
 ## Repo structure
 
