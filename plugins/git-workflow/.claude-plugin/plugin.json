@@ -1,6 +1,6 @@
 {
   "name": "git-workflow",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Git-related skills: commit staging and message conventions, PR title and description generation, adversarial multi-perspective code review.",
   "author": {
     "name": "Alister Pineda",

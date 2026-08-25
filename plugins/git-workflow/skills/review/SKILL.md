@@ -65,6 +65,8 @@ ARGUMENTS: $ARGUMENTS
 - **Commit range** (`A..B`): review that range's diff. A **single commit** means that commit's own change: `git show <commit>` (equivalently `git diff <commit>^..<commit>`) — never `git diff <commit>`, which would diff against the working tree instead.
 - **Path**: review uncommitted changes limited to that path.
 
+If the resolved diff is empty (an explicit target that adds no changes — e.g. a branch already merged, or a path with no uncommitted edits), make your final message a statement that there is nothing to review for that target, and stop — do not snapshot or spawn reviewers over an empty diff.
+
 The resolved target appears in the report's title line (step 8), which is how the user catches a misinterpretation — state it there exactly as you resolved it, not as it was typed.
 
 ## 3. Scout the diff and snapshot it
@@ -99,7 +101,7 @@ Skipping is not silent: the report header lists which perspectives were skipped 
 **If the host provides a subagent-spawning tool** (Claude Code's Agent/Task tool or equivalent): spawn all selected reviewers in parallel, one subagent per perspective, applying `--model` if given. Each subagent's prompt must contain:
 
 1. The absolute path to its charter file, with the instruction to read it first and adopt that role completely.
-2. The resolved target, and the absolute path to `<snapshot>/diff.patch` to read as the reviewed change — stating that the snapshot is the authoritative state and that `file:line` citations must come from it, since live files can differ when the scope is staged-only — — plus, when the scope includes untracked files (`git diff` never shows them), the absolute path of `<snapshot>/untracked/` with the instruction to read every file under it in full as part of the reviewed change.
+2. The resolved target, and the absolute path to `<snapshot>/diff.patch` to read as the reviewed change — stating that the snapshot is the authoritative state and that `file:line` citations must come from it, since live files can differ when the scope is staged-only — plus, when the scope includes untracked files (`git diff` never shows them), the absolute path of `<snapshot>/untracked/` with the instruction to read every file under it in full as part of the reviewed change.
 3. That it has read access to the full repository for context, but must not modify anything.
 4. That its final message must be only its findings in the charter's output format (or the charter's explicit "no findings" statement) — no preamble, no summary of its process.
 
@@ -115,7 +117,7 @@ Merge findings that share a root cause, even when different perspectives describ
 
 Every deduplicated finding goes through refutation — no exceptions, including findings that look obviously right. The charter is `references/verifier.md`.
 
-With subagents: spawn one verifier per finding, in parallel — in waves of at most 8 when findings are numerous, so a noisy review does not fan out into dozens of concurrent subagents — applying `--model` if given. Each verifier gets the charter path, the single finding it is judging (full text), and the same snapshot paths the reviewers got (`<snapshot>/diff.patch`, plus `<snapshot>/untracked/` when in scope). Fresh context per finding is the point — the verifier must re-derive the truth from the code, not inherit the reviewer's framing.
+With subagents: spawn one verifier per finding, in parallel — in waves of at most 8 when findings are numerous, so a noisy review does not fan out into dozens of concurrent subagents — applying `--model` if given. Each verifier gets the charter path, the single finding it is judging (full text), and the same snapshot paths the reviewers got (`<snapshot>/diff.patch`, plus `<snapshot>/untracked/` when in scope). Fresh context per finding is the point — the verifier must re-derive the truth from the code, not inherit the reviewer's framing. If a verifier subagent fails, hangs, or never returns a verdict, verify that finding yourself inline following the same charter — never leave a finding unverified or let it pass into the report by default.
 
 Without subagents: verify sequentially, one finding at a time. Before each one, re-read the relevant code from scratch and actively look for reasons the finding is wrong; you wrote these findings minutes ago, so bias toward refutation to compensate.
 
@@ -153,4 +155,4 @@ Where the verifier corrected a severity, append *(severity corrected from X by v
 
 Without the flag: the report is the end. Do not apply fixes, do not offer to.
 
-With the flag: apply the suggested fix for each confirmed finding yourself, directly (not via subagents), making the smallest change that resolves the defect. Then run whatever cheap sanity check the project offers (build, lint, or the directly relevant tests) and append a `## Fixes applied` section to the report summarizing what was changed and what was verified. When running as a background fork, these edits bypass the host's checkpoint/rewind mechanism — say so in that section and point at git as the way to undo them. If a fix is too risky or ambiguous to apply mechanically, skip it and say why in that section instead of guessing.
+With the flag: apply the suggested fix for each confirmed finding yourself, directly (not via subagents), making the smallest change that resolves the defect. Before each fix, re-read the live file at the finding's site and compare it against the snapshot: the review may have run in the background while the user kept editing, and if the code there no longer matches the snapshot, skip that fix and note the divergence in the `## Fixes applied` section rather than patching lines that have moved or changed. Then run whatever cheap sanity check the project offers (build, lint, or the directly relevant tests) and append a `## Fixes applied` section to the report summarizing what was changed and what was verified. When the reviewed scope was the staged changes, the fixes land in the working tree **unstaged** — do not stage them yourself, but say so explicitly in that section, since a commit made from the staged state alone would not include them. When running as a background fork, these edits bypass the host's checkpoint/rewind mechanism — say so in that section and point at git as the way to undo them. If a fix is too risky or ambiguous to apply mechanically, skip it and say why in that section instead of guessing.
