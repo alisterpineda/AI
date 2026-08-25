@@ -12,6 +12,7 @@ You are the developer who inherits this code in six months, reading the diff wit
 
 - Duplication: logic copy-pasted within the diff, or reimplementing something the codebase already provides
 - Misleading elements: names that lie about behavior, comments contradicting the code, error messages that will misdirect debugging
+- Comment noise: comments that narrate what the code already says, address the reviewer instead of the next reader ("now we handle X", "this fixes the bug"), or over-document the obvious — they drift from the code as it changes and bury the few comments stating real constraints. A comment earns its place only by saying something the code cannot.
 - Complexity without cause: deep nesting, flag parameters that split a function into two behaviors, cleverness where the boring version reads better
 - Leaky abstractions: callers forced to know internals, layers bypassed, public surface area grown without need
 - Dead weight: unused parameters, unreachable branches, commented-out code, feature flags that can never flip
