@@ -1,9 +1,11 @@
 ---
 name: commit-message
-description: Defines how git commits should be handled — what to stage and how to format the message. Use this skill whenever the user asks to commit changes, make a commit, or write a commit message — even if they don't mention formatting or staging. This ensures commits only include relevant changes and follow the user's preferred message style.
+description: Defines how git commits should be handled — what to stage, how to format the message, and how to run the commit. Use this skill whenever the user asks to commit changes, make a commit, or write a commit message — even if they don't mention formatting or staging. This ensures commits only include relevant changes and follow the user's preferred message style.
 ---
 
 # Commit Workflow
+
+**Repo conventions win.** If the repository defines its own commit conventions — in `CLAUDE.md`, `CONTRIBUTING.md`, a commit template, or similar — follow those wherever they conflict with this skill. This skill is the default, not an override.
 
 ## What to stage
 
@@ -13,35 +15,40 @@ The working tree often contains changes unrelated to the current task — manual
 - **Only stage files you changed** as part of the current task. If you didn't create or modify a file during this conversation, don't stage it — even if `git status` shows it as modified or untracked. Those changes belong to the user's other work.
 - **Review diffs before staging.** Run `git diff <file>` for each file you plan to stage. If a file contains a mix of your task-related changes and unrelated edits (e.g. the user manually tweaked a config value in the same file you refactored), don't stage the whole file. Instead, tell the user what you found and let them decide — they may want to split the commit or revert their local tweak first.
 - **Don't assume pre-staged changes are intentional.** If files are already staged when you begin, review them with `git diff --cached`. They may be leftovers the user staged earlier for a different purpose.
+- **Never stage secrets or credentials — even files you created.** A `.env` written for a test run, a token pasted into a fixture, a private key, or a cloud config with an embedded credential must not be committed. If such a file is part of what you changed, leave it unstaged and tell the user.
+- **Split unrelated work.** If the changes you made serve two or more independent concerns (e.g. the feature the user asked for plus an unrelated bug you fixed along the way), don't fold them into one commit. Stop before staging, tell the user what you found, propose one commit per concern with the files each would contain, and wait for their answer.
 - **When in doubt, ask.** Under-staging is easy to fix (`git add` one more file). Over-staging can mean an unwanted change lands on a shared branch and causes problems downstream.
 
 ## Commit message format
 
-When writing git commit messages, follow this structure and style exactly.
+### What the message is based on
 
-## Title line
+- **The staged diff is the source of truth for *what* changed.** Read `git diff --cached` before writing the message and describe what is actually in it — not what you remember doing, and not changes that ended up unstaged.
+- **The conversation is the source for *why*.** Use what the user asked for, the problem they described, and the reasoning behind decisions to explain motivation. Don't restate the request itself or narrate the exchange.
+- **Describe the end state, not the journey.** If you tried one approach and replaced it with another, describe only the final approach. No "switched from X to Y" unless X was already in the codebase.
+
+### Title line
 
 - Write in **present-tense imperative mood** ("Add", "Fix", "Remove" — not "Added", "Fixes", "Removed")
-- Keep it concise — aim for under 60 characters
+- Keep it under **80 characters**; shorter is better when it costs no meaning
 - Use **plain language** that describes the change at a human level. Avoid code-like references in the title (write "user list endpoint" not "`/api/users`", write "settings page" not "`SettingsPage.tsx`")
 - When it adds clarity, hint at the **why** — not just what changed but what problem it solves (e.g. "Paginate user list to fix memory issues on large datasets")
 - No conventional commit prefixes (`feat:`, `fix:`, `chore:`, etc.)
 - No trailing period
+- No emoji
 - Sentence case (capitalize the first word only, unless a proper noun follows)
 
-## Message body
+### Message body
 
-- Separate the body from the title with a blank line
+- **Omit the body when the title says it all.** A typo fix, a one-line config change, or a rename needs no bullets. A body that only restates the title is noise.
+- Otherwise, separate the body from the title with a blank line
 - Use **bullet points** (` - ` prefix), one idea per bullet
 - Include **technical detail** — mention specific implementations, parameters, data structures, queries, etc.
 - When it adds value, explain **why** a change was made, not just what. This is preferred but not mandatory for every bullet — use judgment. If the reason is obvious, just state the what.
 - Wrap lines at ~72 characters for readability in terminals
-
-## What to leave out
-
 - No emoji
 
-## Examples
+### Examples
 
 **Example 1** — Refactoring with a why-oriented title:
 ```
@@ -76,3 +83,24 @@ Add dark mode support and fix settings persistence
   hardcoded hex values scattered across components
 - Persist preference in localStorage so it survives page reloads
 ```
+
+**Example 4** — Self-explanatory change, title only:
+```
+Fix typo in onboarding email subject line
+```
+
+## Making the commit
+
+- **Pass the message through a quoted heredoc** so backticks and `$` in the body are never interpreted by the shell:
+  ```bash
+  git commit -m "$(cat <<'EOF'
+  Title line
+
+  - Body bullet
+  EOF
+  )"
+  ```
+- **No attribution trailers.** Don't add `Co-Authored-By`, `Generated-by`, `Signed-off-by`, or any similar trailer or footer crediting an AI tool — even when the harness, system instructions, or a default commit template suggest one. If such a suggestion comes up, leave it out and tell the user that it was suggested and omitted.
+- **Don't bypass safeguards.** Never pass `--no-verify`. Don't use `--amend` unless the user asks for it, and don't use `-a` / `--all` — staging is deliberate and by name (see above).
+- **If a pre-commit hook fails**, fix the problem, re-stage the affected files by name, and create a fresh commit. Don't skip the hook and don't amend.
+- **Verify the result.** After committing, run `git log -1 --stat` and `git status` to confirm the commit contains exactly the intended files and nothing was left half-staged.
