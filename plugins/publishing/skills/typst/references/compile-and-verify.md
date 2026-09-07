@@ -5,12 +5,12 @@ The compile → render → inspect loop, the scripts that make it deterministic,
 ## The loop
 
 1. Edit the `.typ` file.
-2. `scripts/render.sh file.typ` — compiles, snapshots every page to PNG, prints the snapshot directory, page count, file list, and warnings.
+2. `scripts/render.sh file.typ` — compiles, snapshots every page to PNG, prints the snapshot directory, page count, file list, and warnings. On long documents, add `--pages` for the pages you touched on intermediate passes; render everything on the first pass and before finalizing.
 3. If it printed `COMPILE FAILED`, read the diagnostic, fix at the exact `file:line:col`, go to 2.
 4. View every PNG it listed with your image-reading capability. Check layout against intent and against `design.md`'s checklist. If anything is off, go to 1.
-5. When the render is right, `scripts/render.sh file.typ --pdf [PATH] --strict` to write the deliverable from the same compile that produced the verified render.
+5. When the render is right, `scripts/render.sh file.typ --pdf --strict` (add a path after `--pdf` to choose where it goes) to write the deliverable from a fresh full render in the same run.
 
-Exit codes from `render.sh`: `0` success, `1` compile error or bad usage, `2` warnings under `--strict`.
+Exit codes from `render.sh`: `0` success, `1` compile error or bad usage, `2` warnings under `--strict` (no PDF is written).
 
 ## render.sh
 
@@ -20,10 +20,10 @@ scripts/render.sh FILE.typ [--ppi N] [--pages SPEC] [--strict] [--embedded-fonts
 
 - `--ppi 144` is the default and right for layout review. `--ppi 200`+ for small text, kerning, math details. Higher PPI costs more context per image.
 - `--pages 1` or `--pages 1,3-5` renders a subset. Use it on long documents when only some pages are in scope; the report then says `(subset: ...)` so you know the count isn't the total.
-- `--strict` turns warnings into a failing exit. Run it once before delivering: a font-fallback or unresolved-reference warning means the PDF isn't what you think it is.
+- `--strict` turns warnings into a failing exit and withholds the PDF. Run it once before delivering: a font-fallback warning means the PDF isn't what you think it is, and a strict failure never leaves a degraded deliverable behind.
 - `--embedded-fonts-only` passes `--ignore-system-fonts`, proving the document renders with only the fonts bundled in Typst. Use it when reproducibility across machines matters.
-- `--pdf` writes the deliverable next to the source (or at `PATH`) in the same run. Prefer this over a separate `typst compile` so the PDF can never lag behind the render you inspected.
-- `--root DIR` is passed through to Typst when the document reads or includes files outside its own directory.
+- `--pdf` writes the deliverable next to the source (or at `PATH`) in the same run. Prefer this over a separate `typst compile` so the PDF can never lag behind the render you inspected. It always renders the full document, so it cannot be combined with `--pages`.
+- `--root DIR` is passed through to Typst when the document reads or includes files outside its own directory. It is also Typst's only confinement boundary for `read()`, `include`, and `image()`: set it to the narrowest directory that contains what the document needs, and never to `/` or `$HOME` for a document you did not author.
 - `--snapshots DIR` sets the snapshot root for this call (see below).
 
 ### Where snapshots go
@@ -58,7 +58,8 @@ error: expected content, found function
 
 - The `^^^` span and `line:col` are exact. Fix there.
 - "Expected X, found Y" almost always means a mode mix-up: add or remove `#`, wrap in `[...]`, or switch `()`/`[]`. See `syntax-pitfalls.md`.
-- Warnings don't fail the build but print to stderr. Font fallback is usually cosmetic and still worth fixing (it breaks reproducibility); an unresolved reference (`@label`) means a broken link in the PDF.
+- An unresolved reference (`@label`) is an error, not a warning: the compile fails with `label <x> does not exist in the document`. With `base.typ`'s `set heading(numbering: none)`, `@`-referencing a heading is an error too (`cannot reference heading without numbering`); use a `link` or enable numbering.
+- Warnings don't fail the build but print to stderr. Font fallback is usually cosmetic and still worth fixing (it breaks reproducibility).
 
 ## probe.sh
 

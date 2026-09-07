@@ -12,6 +12,10 @@
 // Fonts default to the faces bundled inside the Typst binary, so the output
 // renders identically on every machine with no font installation.
 
+// Greys shared by `doc` and `title-block`, so secondary text stays one colour.
+#let faint = luma(120)   // page numbers, captions, metadata lines
+#let muted = luma(90)    // subtitles
+
 #let doc(
   paper: "us-letter",        // "us-letter" | "a4" | any Typst paper name
   margin: 1in,               // length, or a dictionary like (x: 0.8in, y: 1in)
@@ -26,7 +30,6 @@
   body,
 ) = {
   let ink = if accent == none { black } else { accent }
-  let faint = luma(120)
 
   set page(
     paper: paper,
@@ -35,7 +38,14 @@
       let total = counter(page).final().first()
       let show-number = page-numbers == true or (page-numbers == auto and total > 1)
       if show-number {
-        align(center, text(size: 0.85em, fill: faint, counter(page).display("1")))
+        // Honour a `set page(numbering: ...)` placed after `#show: doc`. As in
+        // Typst's own footer, "current of total" is shown only when the
+        // pattern has two counting symbols, e.g. "1 of 1".
+        let fmt = page.numbering
+        let num = if fmt == none { counter(page).display("1") }
+          else if type(fmt) == str { counter(page).display(fmt, both: fmt.matches(regex("[1aAiI*]")).len() >= 2) }
+          else { counter(page).display(fmt) }
+        align(center, text(size: 0.85em, fill: faint, num))
       }
     },
   )
@@ -62,7 +72,21 @@
     inset: (x: 6pt, y: 5pt),
     stroke: (x, y) => if y == 0 { (bottom: 0.6pt + ink) } else { none },
   )
-  show table: it => block(stroke: (bottom: 0.6pt + ink), inset: 0pt, it)
+  // The bottom rule is a non-repeating footer row: a stroked wrapper block or
+  // a trailing table.hline would repeat the rule at every page break. Tables
+  // that bring their own footer or end with their own hline are left alone.
+  show table: it => {
+    let fields = it.fields()
+    let children = fields.remove("children")
+    let has-footer = children.any(c => c.func() == table.footer)
+    let ends-with-line = children.len() > 0 and children.last().func() == table.hline
+    if has-footer or ends-with-line { it } else {
+      let cols = it.columns
+      let n = if type(cols) == int { cols } else if type(cols) == array { cols.len() } else { 1 }
+      let rule = table.footer(repeat: false, table.cell(colspan: n, inset: 0pt, stroke: (top: 0.6pt + ink), []))
+      table(..fields, ..children, rule)
+    }
+  }
   show table.cell.where(y: 0): set text(weight: "bold")
 
   // Links: subtle underline, same ink as text unless an accent is set.
@@ -84,17 +108,18 @@
 }
 
 // Title block: left-aligned title, optional subtitle and a metadata line
-// (author, date, version). Use once, at the top of the document.
-#let title-block(title, subtitle: none, meta: none) = {
+// (author, date, version). Use once, at the top of the document. Pass the
+// same `accent` as `doc` to colour the title like the headings.
+#let title-block(title, subtitle: none, meta: none, accent: none) = {
   block(below: 1.4em)[
-    #text(size: 2em, weight: "bold")[#title]
+    #text(size: 2em, weight: "bold", fill: if accent == none { black } else { accent })[#title]
     #if subtitle != none [
       #v(-0.6em)
-      #text(size: 1.15em, fill: luma(90))[#subtitle]
+      #text(size: 1.15em, fill: muted)[#subtitle]
     ]
     #if meta != none [
       #v(0.1em)
-      #text(size: 0.9em, fill: luma(120))[#meta]
+      #text(size: 0.9em, fill: faint)[#meta]
     ]
   ]
 }

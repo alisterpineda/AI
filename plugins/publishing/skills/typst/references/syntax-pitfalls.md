@@ -83,14 +83,14 @@ Array vs dict disambiguation: an empty `()` is an empty array; an empty dict is 
 
 ## Strings and raw
 
-```typst
+````typst
 "plain string"                     // double quotes only; no single-quote strings
 "line\nbreak"                      // escapes work
 `inline raw`                       // raw inline, no interpolation
 ```text
 multi-line raw block
 ```
-```
+````
 
 ## Function definitions
 

@@ -62,17 +62,17 @@ Then **view every PNG it listed** with your image-reading capability and check:
 - Fonts are the intended ones (no missing-glyph boxes, no fallback faces).
 - The page would survive a black-and-white photocopy.
 
-Loop until the render matches intent. Snapshots land in a timestamped directory under the temp dir by default. If your harness gave you a session scratchpad directory, use it instead: pass `--snapshots "<scratchpad>/typst-render"` or export `TYPST_SNAPSHOT_DIR` once. Scripts can't discover the scratchpad on their own; only you know the path.
+Loop until the render matches intent. On documents longer than a few pages, render everything on the first pass and again before finalizing; in between, pass `--pages` for the pages you changed (plus their neighbours, since edits reflow) rather than re-viewing every page. Snapshots land in a timestamped directory under the temp dir by default. If your harness gave you a session scratchpad directory, use it instead: pass `--snapshots "<scratchpad>/typst-render"` or export `TYPST_SNAPSHOT_DIR` once. Scripts can't discover the scratchpad on their own; only you know the path.
 
 Defer to the user only when the question is genuinely subjective (colour, font feel, copy), they asked to review, the document is too long to sample usefully, or you cannot ingest images.
 
 ## Step 4: Finalize the deliverable
 
 ```bash
-scripts/render.sh file.typ --pdf [path] --strict
+scripts/render.sh file.typ --pdf --strict      # --pdf out.pdf to choose where it goes
 ```
 
-This writes the PDF from the same compile as the render you just verified, so it can never be stale, and fails on warnings (font fallback, unresolved references) that would silently degrade the PDF. Add `--embedded-fonts-only` when the document must render identically on other machines. Report the PDF path and page count. Leave no PNGs in the working tree.
+This renders the full document once more and writes the PDF in the same run, so it can never be stale, and under `--strict` withholds the PDF when the compile produced warnings (e.g. font fallback) that would silently degrade it. `--pdf` cannot be combined with `--pages`. Add `--embedded-fonts-only` when the document must render identically on other machines. Report the PDF path and page count. Leave no PNGs in the working tree.
 
 ## Step 5: Probe when uncertain about runtime behaviour
 

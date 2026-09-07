@@ -29,12 +29,14 @@ set -uo pipefail
 usage() { awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 1; }
 
 expr="" prelude="" infile=""
+need() { [[ $# -ge 2 ]] || { echo "error: $1 requires a value" >&2; usage; }; }
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --prelude) prelude="$2"; shift 2 ;;
-    --in) infile="$2"; shift 2 ;;
+    --prelude) need "$@"; prelude="$2"; shift 2 ;;
+    --in) need "$@"; infile="$2"; shift 2 ;;
     -h|--help) usage ;;
-    *) if [[ -z "$expr" ]]; then expr="$1"; shift; else expr="$expr $1"; shift; fi ;;
+    --*) echo "unknown flag: $1" >&2; usage ;;
+    *) if [[ -z "$expr" ]]; then expr="$1"; shift; else echo "unexpected argument: $1 (quote EXPR as a single argument)" >&2; usage; fi ;;
   esac
 done
 [[ -n "$expr" ]] || usage

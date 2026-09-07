@@ -1,6 +1,6 @@
 {
   "name": "publishing",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Document production skills: authoring and verifying Typst documents with a compile-render-inspect loop, conservative design defaults, and deterministic helper scripts.",
   "author": {
     "name": "Alister Pineda",
