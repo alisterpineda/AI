@@ -11,6 +11,10 @@
     {
       "name": "git-workflow",
       "source": "./plugins/git-workflow"
+    },
+    {
+      "name": "publishing",
+      "source": "./plugins/publishing"
     }
   ]
 }

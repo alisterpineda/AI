@@ -38,6 +38,14 @@ Git-related skills.
 | `pr-description` | model-invoked | Generates PR titles and descriptions from a branch diff. |
 | `review` | **user-only**: `/git-workflow:review [--fix] [--model <name>] [target]` | Adversarial multi-perspective code review — parallel reviewer subagents (correctness, security, maintainability, tests, performance) plus a skeptic verification pass on every finding. Defaults to uncommitted changes; report-only unless `--fix` is passed. |
 
+### publishing
+
+Document production skills.
+
+| Skill | Invocation | What it does |
+|---|---|---|
+| `typst` | model-invoked | Writes and iterates on Typst documents with a compile → render → inspect loop. Ships a neutral `base.typ`, conservative design principles, and `render.sh` / `probe.sh` scripts for deterministic verification. Requires the `typst` CLI. |
+
 ## Repo structure
 
 See [CLAUDE.md](CLAUDE.md) for the plugin skeleton and authoring conventions.
